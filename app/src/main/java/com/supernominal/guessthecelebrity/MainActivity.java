@@ -71,8 +71,13 @@ public class MainActivity extends AppCompatActivity {
             Matcher m = p.matcher(result);
             while (m.find()) {
                 celebrityNames.add(m.group(1));
-                celebrityImageUrls.add(m.group(2));
+                celebrityImageUrls.add(m.group(2)
+                        .replace("140,209_","214,317_")
+                        .replace("_UX140_", "_UX214_")
+                        .replace("_UY209_", "_UY317_")
+                );
             }
+
             generateQuestion();
             ProgressBar progressBar = findViewById(R.id.progressBar);
             progressBar.setVisibility(View.GONE);
