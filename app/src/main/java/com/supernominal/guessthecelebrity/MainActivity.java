@@ -81,8 +81,8 @@ public class MainActivity extends AppCompatActivity {
                         .replace("_UY209_", "_UY317_")
                 );
             }
-            generateQuestion();
             endProgressBar();
+            generateQuestion();
         }
     }
 
@@ -118,12 +118,12 @@ public class MainActivity extends AppCompatActivity {
         Button button = (Button) view;
         if (Integer.parseInt(button.getTag().toString()) == correctCelebrity) {
             Toast toast = Toast.makeText(this, "Correct!", Toast.LENGTH_SHORT);
-            toast.setGravity(Gravity.CENTER, 0 , 100);
+            //toast.setGravity(Gravity.CENTER, 0 , 100);
             toast.show();
         } else {
             String celebrityName = celebrityNames.get(shuffleList.get(correctCelebrity));
             Toast toast = Toast.makeText(this, "Incorrect! It was " + celebrityName, Toast.LENGTH_SHORT);
-            toast.setGravity(Gravity.CENTER, 0 , 100);
+            //toast.setGravity(Gravity.CENTER, 0 , 100);
             toast.show();
         }
         generateQuestion();
