@@ -43,9 +43,13 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String KEY_URL = "key url";
-    public static final String KEY_RESULT = "key result";
-    public static final String BROADCAST_ACTION = "broadcast action";
+    public static final String KEY_URL = "key_url";
+    public static final String KEY_RESULT = "key_result";
+    public static final String BROADCAST_ACTION = "broadcast_action";
+    private static final String STATE_CORRECT_CELEBRITY = "state_correct_celebrity";
+    private static final String STATE_CELEBRITY_IMAGE_URLS = "celebrity_image_urls";
+    private static final String STATE_CELEBRITY_NAMES = "celebrity_names";
+    private static final String STATE_SHUFFLE_LIST = "shuffle_list";
     ArrayList<String> celebrityImageUrls = new ArrayList<>();
     ArrayList<String> celebrityNames = new ArrayList<>();
     ArrayList<Integer> shuffleList = new ArrayList<>();
@@ -57,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     Button button2;
     Button button3;
 
-    public void buildCelebrityList() {
+    private void buildCelebrityList() {
         Intent intent = new Intent(this, DownloadIntentService.class);
         intent.putExtra(KEY_URL, "http://www.imdb.com/list/ls052283250/");
         startService(intent);
@@ -77,24 +81,31 @@ public class MainActivity extends AppCompatActivity {
                         .replace("_UY209_", "_UY317_")
                 );
             }
-
             generateQuestion();
-            ProgressBar progressBar = findViewById(R.id.progressBar);
-            progressBar.setVisibility(View.GONE);
-            button0.setVisibility(View.VISIBLE);
-            button1.setVisibility(View.VISIBLE);
-            button2.setVisibility(View.VISIBLE);
-            button3.setVisibility(View.VISIBLE);
+            endProgressBar();
         }
     }
 
-    public void generateQuestion() {
+    private void endProgressBar() {
+        ProgressBar progressBar = findViewById(R.id.progressBar);
+        progressBar.setVisibility(View.GONE);
+        button0.setVisibility(View.VISIBLE);
+        button1.setVisibility(View.VISIBLE);
+        button2.setVisibility(View.VISIBLE);
+        button3.setVisibility(View.VISIBLE);
+    }
+
+    private void generateQuestion() {
         int lastCelebrity = shuffleList.get(correctCelebrity);
         Random rand = new Random();
         correctCelebrity = rand.nextInt(4);
         do {
             Collections.shuffle(shuffleList);
         } while (shuffleList.get(correctCelebrity) == lastCelebrity);
+        showQuestion();
+    }
+
+    private void showQuestion() {
         String celebrityUrl = celebrityImageUrls.get(shuffleList.get(correctCelebrity));
         Picasso.with(this).load(celebrityUrl).into(imageView);
         button0.setText(celebrityNames.get(shuffleList.get(0)));
@@ -129,17 +140,34 @@ public class MainActivity extends AppCompatActivity {
         button2 = findViewById(R.id.button2);
         button3 = findViewById(R.id.button3);
 
-        IntentFilter statusIntentFilter = new IntentFilter(
-                BROADCAST_ACTION);
-        DownloadResponseReceiver responseReceiver =
-                new DownloadResponseReceiver();
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-                responseReceiver, statusIntentFilter );
+        if (savedInstanceState == null) {
+            IntentFilter statusIntentFilter = new IntentFilter(
+                    BROADCAST_ACTION);
+            DownloadResponseReceiver responseReceiver =
+                    new DownloadResponseReceiver();
+            LocalBroadcastManager.getInstance(this).registerReceiver(
+                    responseReceiver, statusIntentFilter);
 
-        for (int i = 0; i < 100; i++) {
-            shuffleList.add(i);
+            for (int i = 0; i < 100; i++) {
+                shuffleList.add(i);
+            }
+            buildCelebrityList();
+        } else {
+            celebrityImageUrls = savedInstanceState.getStringArrayList(STATE_CELEBRITY_IMAGE_URLS);
+            celebrityNames = savedInstanceState.getStringArrayList(STATE_CELEBRITY_NAMES);
+            shuffleList = savedInstanceState.getIntegerArrayList(STATE_SHUFFLE_LIST);
+            correctCelebrity = savedInstanceState.getInt(STATE_CORRECT_CELEBRITY);
+            endProgressBar();
+            showQuestion();
         }
+    }
 
-        buildCelebrityList();
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putStringArrayList(STATE_CELEBRITY_IMAGE_URLS, celebrityImageUrls);
+        outState.putStringArrayList(STATE_CELEBRITY_NAMES, celebrityNames);
+        outState.putIntegerArrayList(STATE_SHUFFLE_LIST, shuffleList);
+        outState.putInt(STATE_CORRECT_CELEBRITY, correctCelebrity);
+        super.onSaveInstanceState(outState);
     }
 }
