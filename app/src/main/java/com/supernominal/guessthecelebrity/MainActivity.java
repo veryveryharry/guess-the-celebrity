@@ -4,42 +4,23 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
-import android.os.PersistableBundle;
-import android.support.constraint.ConstraintLayout;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,10 +31,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String STATE_CELEBRITY_IMAGE_URLS = "celebrity_image_urls";
     private static final String STATE_CELEBRITY_NAMES = "celebrity_names";
     private static final String STATE_SHUFFLE_LIST = "shuffle_list";
+    private static final String STATE_DOWNLOAD_COMPLETED = "download_completed";
     ArrayList<String> celebrityImageUrls = new ArrayList<>();
     ArrayList<String> celebrityNames = new ArrayList<>();
     ArrayList<Integer> shuffleList = new ArrayList<>();
     int correctCelebrity = 0;
+    private boolean downloadCompleted = false;
 
     ImageView imageView;
     Button button0;
@@ -76,13 +59,14 @@ public class MainActivity extends AppCompatActivity {
             while (m.find()) {
                 celebrityNames.add(m.group(1));
                 celebrityImageUrls.add(m.group(2)
-                        .replace("140,209_","214,317_")
+                        .replace("140,209_", "214,317_")
                         .replace("_UX140_", "_UX214_")
                         .replace("_UY209_", "_UY317_")
                 );
             }
-            endProgressBar();
+            downloadCompleted = true;
             generateQuestion();
+            endProgressBar();
         }
     }
 
@@ -118,12 +102,12 @@ public class MainActivity extends AppCompatActivity {
         Button button = (Button) view;
         if (Integer.parseInt(button.getTag().toString()) == correctCelebrity) {
             Toast toast = Toast.makeText(this, "Correct!", Toast.LENGTH_SHORT);
-            toast.setGravity(Gravity.CENTER, 0 , 70);
+            toast.setGravity(Gravity.CENTER, 0, 70);
             toast.show();
         } else {
             String celebrityName = celebrityNames.get(shuffleList.get(correctCelebrity));
             Toast toast = Toast.makeText(this, "Incorrect! It was " + celebrityName, Toast.LENGTH_SHORT);
-            toast.setGravity(Gravity.CENTER, 0 , 70);
+            toast.setGravity(Gravity.CENTER, 0, 70);
             toast.show();
         }
         generateQuestion();
@@ -140,7 +124,15 @@ public class MainActivity extends AppCompatActivity {
         button2 = findViewById(R.id.button2);
         button3 = findViewById(R.id.button3);
 
-        if (savedInstanceState == null) {
+        if (savedInstanceState != null && savedInstanceState.getBoolean(STATE_DOWNLOAD_COMPLETED)) {
+            celebrityImageUrls = savedInstanceState.getStringArrayList(STATE_CELEBRITY_IMAGE_URLS);
+            celebrityNames = savedInstanceState.getStringArrayList(STATE_CELEBRITY_NAMES);
+            shuffleList = savedInstanceState.getIntegerArrayList(STATE_SHUFFLE_LIST);
+            correctCelebrity = savedInstanceState.getInt(STATE_CORRECT_CELEBRITY);
+            downloadCompleted = true;
+            endProgressBar();
+            showQuestion();
+        } else {
             IntentFilter statusIntentFilter = new IntentFilter(
                     BROADCAST_ACTION);
             DownloadResponseReceiver responseReceiver =
@@ -152,13 +144,6 @@ public class MainActivity extends AppCompatActivity {
                 shuffleList.add(i);
             }
             buildCelebrityList();
-        } else {
-            celebrityImageUrls = savedInstanceState.getStringArrayList(STATE_CELEBRITY_IMAGE_URLS);
-            celebrityNames = savedInstanceState.getStringArrayList(STATE_CELEBRITY_NAMES);
-            shuffleList = savedInstanceState.getIntegerArrayList(STATE_SHUFFLE_LIST);
-            correctCelebrity = savedInstanceState.getInt(STATE_CORRECT_CELEBRITY);
-            endProgressBar();
-            showQuestion();
         }
     }
 
@@ -168,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         outState.putStringArrayList(STATE_CELEBRITY_NAMES, celebrityNames);
         outState.putIntegerArrayList(STATE_SHUFFLE_LIST, shuffleList);
         outState.putInt(STATE_CORRECT_CELEBRITY, correctCelebrity);
+        outState.putBoolean(STATE_DOWNLOAD_COMPLETED, downloadCompleted);
         super.onSaveInstanceState(outState);
     }
 }
