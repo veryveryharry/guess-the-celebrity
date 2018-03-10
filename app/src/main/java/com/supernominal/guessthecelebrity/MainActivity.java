@@ -1,10 +1,8 @@
 package com.supernominal.guessthecelebrity;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.support.v4.content.LocalBroadcastManager;
+import android.os.Handler;
+import android.os.ResultReceiver;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -25,8 +23,8 @@ import java.util.regex.Pattern;
 public class MainActivity extends AppCompatActivity {
 
     public static final String KEY_URL = "key_url";
-    public static final String KEY_RESULT = "key_result";
-    public static final String BROADCAST_ACTION = "broadcast_action";
+    public static final String KEY_RESULT_DATA = "key_result";
+    public static final String KEY_RECEIVER = "key_receiver";
     private static final String STATE_CORRECT_CELEBRITY = "state_correct_celebrity";
     private static final String STATE_CELEBRITY_IMAGE_URLS = "celebrity_image_urls";
     private static final String STATE_CELEBRITY_NAMES = "celebrity_names";
@@ -37,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     ArrayList<Integer> shuffleList = new ArrayList<>();
     int correctCelebrity = 0;
     private boolean downloadCompleted = false;
+    private DownloadResultReceiver resultReceiver;
 
     ImageView imageView;
     Button button0;
@@ -45,17 +44,30 @@ public class MainActivity extends AppCompatActivity {
     Button button3;
 
     private void buildCelebrityList() {
+        resultReceiver = new DownloadResultReceiver(new Handler());
         Intent intent = new Intent(this, DownloadIntentService.class);
+        intent.putExtra(KEY_RECEIVER, resultReceiver);
         intent.putExtra(KEY_URL, "http://www.imdb.com/list/ls052283250/");
         startService(intent);
     }
 
-    private class DownloadResponseReceiver extends BroadcastReceiver {
+    private class DownloadResultReceiver extends ResultReceiver {
+        DownloadResultReceiver(Handler handler) {
+            super(handler);
+        }
+
         @Override
-        public void onReceive(Context context, Intent intent) {
-            String result = intent.getStringExtra(KEY_RESULT);
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            if (resultData == null) {
+                return;
+            }
+            String resultString = resultData.getString(KEY_RESULT_DATA);
+            if (resultCode != DownloadIntentService.RESULT_OK || resultString == null || resultString.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Unable to download celebrity list", Toast.LENGTH_SHORT).show();
+                return;
+            }
             Pattern p = Pattern.compile("<div class=\"lister-item-image\">.*?<img.*?alt=\"(.*?)\".*?src=\"(.*?)\"", Pattern.DOTALL);
-            Matcher m = p.matcher(result);
+            Matcher m = p.matcher(resultString);
             while (m.find()) {
                 celebrityNames.add(m.group(1));
                 celebrityImageUrls.add(m.group(2)
@@ -133,13 +145,6 @@ public class MainActivity extends AppCompatActivity {
             endProgressBar();
             showQuestion();
         } else {
-            IntentFilter statusIntentFilter = new IntentFilter(
-                    BROADCAST_ACTION);
-            DownloadResponseReceiver responseReceiver =
-                    new DownloadResponseReceiver();
-            LocalBroadcastManager.getInstance(this).registerReceiver(
-                    responseReceiver, statusIntentFilter);
-
             for (int i = 0; i < 100; i++) {
                 shuffleList.add(i);
             }
